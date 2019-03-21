@@ -50,8 +50,8 @@ struct PageDesc
 
 #define PAGE_INIT( Desc, Addr, Color )              \
     {                                               \
-        (Desc).uKey = CALC_PAGE_KEY( Addr, Color ); \
-        (Desc).next = (Desc).prev = NULL;           \
+        Desc.uKey = CALC_PAGE_KEY( Addr, Color ); \
+        Desc.next = (Desc).prev = NULL;           \
     }
         
 
@@ -91,8 +91,8 @@ PageDesc* PageReclaim( UINT cnt )
 PageDesc* PageInit( void* ptr, UINT color )
 {
     PageDesc* pg = new PageDesc;
-    if( pg )
-        PAGE_INIT(&pg, ptr, color);
+    if(pg)
+        PAGE_INIT(*pg, ptr, color);
     else
         printf("Allocation has failed\n");
     return pg;
@@ -104,12 +104,11 @@ PageDesc* PageInit( void* ptr, UINT color )
 void PageDump()
 {
 	UINT color = 0;
-	#define PG_COLOR_NAME(clr) #clr
 	char* PgColorName[] = 
 	{
-		PG_COLOR_NAME(PG_COLOR_RED),
-		PG_COLOR_NAME(PG_COLOR_YELLOW),
-		PG_COLOR_NAME(PG_COLOR_GREEN)
+		"PG_COLOR_RED",
+		"PG_COLOR_YELLOW",
+		"PG_COLOR_GREEN"
 	};
 
 	while( color <= PG_COLOR_RED )
@@ -117,11 +116,9 @@ void PageDump()
 		printf("PgStrg[(%s) %u] ********** \n", color, PgColorName[color] );
 		for( PageDesc* Pg = PageStrg[++color]; Pg != NULL; Pg = Pg->next )
 		{
-			if( Pg->uAddr = NULL )
+			if( Pg->uAddr == NULL )
 				continue;
-
 			printf("Pg :Key = 0x%x, addr %p\n", Pg->uKey, Pg->uAddr );
 		}
 	}
-	#undef PG_COLOR_NAME
 }
