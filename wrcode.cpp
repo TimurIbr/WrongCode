@@ -21,12 +21,15 @@ enum PAGE_COLOR
 /**
  * UINT Key of a page in hash-table (prepared from color and address)
  */
+#define PageKey_cColor_size 8
+#define PageKey_cAddr_size 24
+
 union PageKey
 {
 	struct
 	{
-        CHAR	cColor: 8;
-		UINT	cAddr: 24;
+        	CHAR	cColor: PageKey_cColor_size;
+		UINT	cAddr: PageKey_cAddr_size;
 	};
 
 	UINT	uKey;
@@ -34,7 +37,11 @@ union PageKey
 
 
 /* Prepare from 2 chars the key of the same configuration as in PageKey */
-#define CALC_PAGE_KEY( Addr, Color )	(  (Color) + (Addr) << 8 ) 
+union PageKey CALC_PAGE_KEY( UINT Addr, CHAR Color ){
+	union PageKey temp;
+	temp.uKey = (  (Color) + (Addr) << PageKey_cColor_size );
+	return temp;
+}
 
 
 /**
@@ -45,36 +52,43 @@ struct PageDesc
 	PageKey			uKey;	
 
 	/* list support */
-	PageDesc		*next, *prev;
+	PageDesc		*next; 
+	PageDesc		*prev;
 };
 
-#define PAGE_INIT( Desc, Addr, Color )              \
-    {                                               \
-        Desc.uKey = CALC_PAGE_KEY( Addr, Color ); \
-        Desc.next = (Desc).prev = NULL;           \
-    }
-        
-
-/* storage for pages of all colors */
-static PageDesc* PageStrg[ 3 ];
+void PAGE_INIT(struct PageDesc * Desc, void* Addr, CHAR Color )             
+{                                               
+        Desc->uKey = CALC_PAGE_KEY( static_cast<UINT>(reinterpret_cast<intptr_t>(Addr)), Color ); ///////////////////
+        Desc->next = Desc->prev = NULL;           
+}
+#define PageStrg_size 3
+/* storage for pages of all colors *//*singlton*/
+static PageDesc* PageStrg[ PageStrg_size ];
 
 void PageStrgInit()
 {
-	memset( PageStrg, 0, sizeof(&PageStrg) );
+	for(int i = 0; i < PageStrg_size; ++i){
+		PAGE_INIT(PageStrg[i], NULL, 0) ;
+	}
 }
 
 PageDesc* PageFind( void* ptr, char color )
 {
 	for( PageDesc* Pg = PageStrg[color]; Pg; Pg = Pg->next );
-        if( Pg->uKey == CALC_PAGE_KEY(ptr,color) )
+        if( Pg->uKey == CALC_PAGE_KEY(ptr, color) )
            return Pg;                                                                                                                                     
     return NULL;
 }
 
-PageDesc* PageReclaim( UINT cnt )
+PageDesc* PageReclaim( UINT cnt )//////////////
 {
 	UINT color = 0;
 	PageDesc* Pg;
+	if( Pg == NULL )
+	{
+		color++;
+		Pg = PageStrg[ color ];
+	}
 	while( cnt )
 	{
 		Pg = Pg->next;
@@ -113,12 +127,12 @@ void PageDump()
 
 	while( color <= PG_COLOR_RED )
 	{
-		printf("PgStrg[(%s) %u] ********** \n", color, PgColorName[color] );
+		printf("PgStrg[(%s) %u] ********** \n", PgColorName[color] ,color);
 		for( PageDesc* Pg = PageStrg[++color]; Pg != NULL; Pg = Pg->next )
 		{
 			if( Pg->uAddr == NULL )
 				continue;
-			printf("Pg :Key = 0x%x, addr %p\n", Pg->uKey, Pg->uAddr );
+			printf("Pg :Key = 0x%x, addr %p\n", Pg->uKey.uKey, Pg->uAddr );
 		}
 	}
 }
